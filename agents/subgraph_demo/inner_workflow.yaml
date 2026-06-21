@@ -1,0 +1,20 @@
+name: inner_workflow
+state_keys: [text]
+nodes:
+  - name: validate
+    fn: agents.subgraph_demo.nodes:validate
+  - name: transform
+    fn: agents.subgraph_demo.nodes:transform
+  - name: format_text
+    fn: agents.subgraph_demo.nodes:format_text
+  - name: reject
+    fn: agents.subgraph_demo.nodes:reject
+edges:
+  - [__start__, validate]
+  - conditional:
+      source: validate
+      fn: agents.subgraph_demo.nodes:route_after_validate
+      targets: {ok: transform, invalid: reject}
+  - [transform, format_text]
+  - [format_text, __end__]
+  - [reject, __end__]

@@ -1,0 +1,19 @@
+# Demonstrates the plain "workflow pattern" defined declaratively: this
+# reproduces agents/supervisor/graph.py's research -> code -> review pipeline
+# by referencing its existing, already-tested node functions directly --
+# proving the same topology is expressible in YAML without touching the
+# hand-written graph that the notebooks/tests/README already rely on.
+name: research_pipeline
+state_keys: [task, research, code, review]
+nodes:
+  - name: research
+    fn: agents.supervisor.graph:research_node
+  - name: code
+    fn: agents.supervisor.graph:code_node
+  - name: review
+    fn: agents.supervisor.graph:review_node
+edges:
+  - [__start__, research]
+  - [research, code]
+  - [code, review]
+  - [review, __end__]

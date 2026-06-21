@@ -1,0 +1,14 @@
+name: subgraph_demo
+state_keys: [text]
+nodes:
+  - name: prepare
+    fn: agents.subgraph_demo.nodes:prepare
+  - name: inner
+    workflow: inner_workflow.yaml
+  - name: finalize
+    fn: agents.subgraph_demo.nodes:finalize
+edges:
+  - [__start__, prepare]
+  - [prepare, inner]
+  - [inner, finalize]
+  - [finalize, __end__]
