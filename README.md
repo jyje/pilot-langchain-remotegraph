@@ -78,6 +78,14 @@ export REVIEWER_URL=http://reviewer-agent.internal:8000
 
 A per-agent env var always wins over `REMOTEGRAPH_BASE_URL`, which stays as a fallback for the single-backend case above.
 
+### Subgraph control, verified
+
+`researcher`/`coder`/`reviewer` are flat ReAct agents, so they can't prove `RemoteGraph` actually controls *inside* a remote graph rather than just calling it as an opaque unit. [`agents/subgraph_demo/graph.py`](agents/subgraph_demo/graph.py) is a small, deterministic, LLM-free graph with a real subgraph node (`prepare -> inner (subgraph) -> finalize`), used to check this for real against a live backend in [`notebooks/subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb). Confirmed:
+
+- `stream_subgraphs=True` surfaces the subgraph's own internal node updates as separately namespaced events (`updates|inner:<ns-id>`), not just `inner`'s aggregate result.
+- `interrupt_before=["inner"]` actually pauses the run *before* the subgraph executes (`state.next == ("inner",)`, with `state.values` still untouched by it), and resuming continues correctly through the subgraph to completion.
+- Both hold through the actual `RemoteGraph` class that `agents/supervisor/graph.py` uses, not just the raw `langgraph_sdk` client.
+
 ## CLI reference
 
 ```

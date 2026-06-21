@@ -78,6 +78,14 @@ export REVIEWER_URL=http://reviewer-agent.internal:8000
 
 에이전트별 환경변수는 항상 `REMOTEGRAPH_BASE_URL`보다 우선하며, `REMOTEGRAPH_BASE_URL`은 위의 단일 백엔드 사용 시 fallback으로 남습니다.
 
+### 서브그래프 제어, 검증됨
+
+`researcher`/`coder`/`reviewer`는 flat ReAct 에이전트라서, `RemoteGraph`가 실제로 원격 그래프 *내부*를 제어하는지(단순히 통째로 호출하는 게 아니라)는 증명할 수 없습니다. [`agents/subgraph_demo/graph.py`](agents/subgraph_demo/graph.py)는 실제 서브그래프 노드를 가진 작고 결정론적인(LLM 없는) 그래프(`prepare -> inner (서브그래프) -> finalize`)로, [`notebooks/subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb)에서 실제 백엔드를 상대로 직접 확인했습니다. 확인된 사실:
+
+- `stream_subgraphs=True`로 서브그래프 내부 노드의 업데이트가 별도로 네임스페이스된 이벤트(`updates|inner:<ns-id>`)로 노출됩니다 — `inner`의 집계 결과만 보이는 게 아닙니다.
+- `interrupt_before=["inner"]`가 실제로 서브그래프 실행 *전*에 멈춥니다(`state.next == ("inner",)`, `state.values`도 아직 서브그래프의 영향을 받지 않은 상태) — 재개하면 서브그래프를 거쳐 정상적으로 끝까지 진행됩니다.
+- 둘 다 raw `langgraph_sdk` 클라이언트뿐 아니라 `agents/supervisor/graph.py`가 실제로 쓰는 `RemoteGraph` 클래스를 통해서도 동일하게 동작합니다.
+
 ## CLI 레퍼런스
 
 ```

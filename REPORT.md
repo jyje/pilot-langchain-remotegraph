@@ -9,6 +9,7 @@ This report captures the results of actually running all three backends end-to-e
 | `aegra` | [`aegra.ipynb`](notebooks/aegra.ipynb) | ✅ deploy → list → call ×3 → supervisor pipeline → teardown, all clean | ![aegra Swagger UI](notebooks/screenshots/aegra-swagger.png) |
 | `open-langgraph-platform` | [`open_langgraph_platform.ipynb`](notebooks/open_langgraph_platform.ipynb) | ✅ same, after the upstream fixes in [Known upstream issues](README.md#known-upstream-issues) | ![open-langgraph-platform Swagger UI](notebooks/screenshots/open-langgraph-swagger.png) |
 | `langgraph-platform` (`langgraph dev`) | [`langgraph_platform.ipynb`](notebooks/langgraph_platform.ipynb) | ✅ same, no Docker | ![LangGraph Platform API docs](notebooks/screenshots/langgraph-platform-docs.png) |
+| Subgraph control | [`subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb) | ✅ `stream_subgraphs` + `interrupt_before` confirmed working against a real subgraph node, via `langgraph-platform` | — |
 
 Every backend was exercised through the identical sequence: `backend.deploy(...)` → `backend.up()` → list assistants → call `coder`/`researcher`/`reviewer` directly → run the `supervisor` graph locally (which calls all three over `RemoteGraph`) → `backend.down()`.
 
@@ -120,6 +121,37 @@ or complex function body is usually better served by `def`.
 
 Notably, this run's `reviewer` gave a stricter, more stylistically opinionated verdict than the other two backends for the same lambda-based code — a reminder that these are real (small, local) LLM calls, not fixtures, and minor wording/judgment varies run to run.
 
+## Subgraph control
+
+`researcher`/`coder`/`reviewer` are flat ReAct agents and can't prove `RemoteGraph` controls *inside* a remote graph rather than calling it as an opaque unit. [`agents/subgraph_demo/graph.py`](agents/subgraph_demo/graph.py) is a small, deterministic, LLM-free graph (`prepare -> inner (subgraph) -> finalize`) built specifically to check this — see [`notebooks/subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb) for the full run against `langgraph-platform`.
+
+```
+=== stream_subgraphs=True ===
+updates -> {'prepare': {'text': '[prepared] hello'}}
+updates|inner:1e8055ec-dce0-2da1-0f28-acc26500cfee -> {'shout': {'text': '[PREPARED] HELLO'}}
+updates -> {'inner': {'text': '[PREPARED] HELLO'}}
+updates -> {'finalize': {'text': '[PREPARED] HELLO [finalized]'}}
+
+=== interrupt_before=["inner"] ===
+updates -> {'prepare': {'text': '[prepared] world'}}
+updates -> {'__interrupt__': []}
+next: ['inner']
+values: {'text': '[prepared] world'}      # subgraph hasn't run yet
+
+=== resume ===
+updates -> {'inner': {'text': '[PREPARED] WORLD'}}
+updates -> {'finalize': {'text': '[PREPARED] WORLD [finalized]'}}
+next: []
+values: {'text': '[PREPARED] WORLD [finalized]'}
+
+=== same thing through the actual RemoteGraph class ===
+paused result: {'text': '[prepared] via RemoteGraph'}
+next: ('inner',)
+final: {'text': '[PREPARED] VIA REMOTEGRAPH [finalized]'}
+```
+
+Confirmed: subgraph-internal events are visible with a distinct namespace (`updates|inner:<ns-id>`), `interrupt_before` genuinely pauses before the subgraph executes (not just before some equivalent top-level checkpoint), and resuming continues through it correctly — through `RemoteGraph` itself, not just the raw SDK client.
+
 ## Reproducing this
 
 ```bash
@@ -128,6 +160,7 @@ cp .env.sample .env   # configure your OpenAI-compatible endpoint
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/aegra.ipynb
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/open_langgraph_platform.ipynb
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/langgraph_platform.ipynb
+uv run jupyter nbconvert --to notebook --execute --inplace notebooks/subgraph_verification.ipynb
 ```
 
 Each notebook is self-contained: it starts its backend, deploys the agents, runs the calls and the supervisor pipeline, and tears the backend back down at the end.
