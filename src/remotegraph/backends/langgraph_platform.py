@@ -11,6 +11,8 @@ Docker-hosted or Cloud deployment.
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 
 from remotegraph.backends.base import REPO_ROOT
@@ -35,6 +37,11 @@ class LangGraphPlatformBackend:
                 cwd=REPO_ROOT,
                 stdout=log,
                 stderr=subprocess.STDOUT,
+                # `uv run` spawns `langgraph dev` as a child rather than
+                # exec'ing into it, so killing just this PID orphans the
+                # actual server. start_new_session puts both in a fresh
+                # process group (pgid == this pid) so down() can kill both.
+                start_new_session=True,
             )
         PID_FILE.write_text(str(process.pid))
 
@@ -42,7 +49,10 @@ class LangGraphPlatformBackend:
         if not PID_FILE.exists():
             return
         pid = int(PID_FILE.read_text())
-        subprocess.run(["kill", str(pid)], check=False)
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         PID_FILE.unlink(missing_ok=True)
 
     def status(self) -> str:
