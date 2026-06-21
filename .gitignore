@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.*
+!.env.sample
+
+# remotegraph runtime state / generated backend configs
+.remotegraph/
+.langgraph_api/
+remotegraph.toml
+.ty_cache/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Agent
+settings.local.json

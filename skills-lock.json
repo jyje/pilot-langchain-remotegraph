@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "centered-readme": {
+      "source": "jyje/skills",
+      "sourceType": "github",
+      "skillPath": "centered-readme/SKILL.md",
+      "computedHash": "0f0e035fd7574ef47a902a16019b9acb8bac90a5490f2d34ea8f740b86c45a6c"
+    },
+    "git-commit-helper": {
+      "source": "jyje/skills",
+      "sourceType": "github",
+      "skillPath": "git-commit-helper/SKILL.md",
+      "computedHash": "35b180116014809e65775d90ab17cdfeac923ec77b2065314ed900237ffdea45"
+    }
+  }
+}

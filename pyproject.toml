@@ -1,0 +1,53 @@
+[project]
+name = "remotegraph"
+version = "0.1.0"
+description = "Pilot CLI for testing LangGraph RemoteGraph across self-hosted LangGraph Platform-compatible backends"
+authors = [
+    { name = "jyje", email = "jyjeon@outlook.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "langchain>=1.3.10",
+    "langchain-openai>=1.3.2",
+    "langgraph>=1.2.6",
+    "langgraph-cli[inmem]>=0.4.30",
+    "langgraph-sdk>=0.4.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "toml>=0.10.2",
+    "typer>=0.26.7",
+]
+
+[project.scripts]
+remotegraph = "remotegraph.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.22,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.15.18",
+    "ty>=0.0.51",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = ["src", "agents", "tests"]
+exclude = ["build", "dist", "vendor"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
