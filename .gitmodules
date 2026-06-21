@@ -1,0 +1,4 @@
+[submodule "vendor/open-langgraph-platform"]
+	path = vendor/open-langgraph-platform
+	url = https://github.com/jyje/open-langgraph-platform.git
+	branch = fix/immutable-index-now-predicate
