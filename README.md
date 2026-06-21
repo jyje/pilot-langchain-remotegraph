@@ -80,11 +80,28 @@ A per-agent env var always wins over `REMOTEGRAPH_BASE_URL`, which stays as a fa
 
 ### Subgraph control, verified
 
-`researcher`/`coder`/`reviewer` are flat ReAct agents, so they can't prove `RemoteGraph` actually controls *inside* a remote graph rather than just calling it as an opaque unit. [`agents/subgraph_demo/graph.py`](agents/subgraph_demo/graph.py) is a small, deterministic, LLM-free graph with a real subgraph node (`prepare -> inner (subgraph) -> finalize`), used to check this for real against a live backend in [`notebooks/subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb). Confirmed:
+`researcher`/`coder`/`reviewer` are flat ReAct agents, so they can't prove `RemoteGraph` actually controls *inside* a remote graph rather than just calling it as an opaque unit. [`agents/subgraph_demo/`](agents/subgraph_demo/) is a small, deterministic, LLM-free graph with a real subgraph node -- `prepare -> inner (subgraph: validate -> {transform -> format_text | reject}) -> finalize`, with branching -- used to check this for real against a live backend in [`notebooks/subgraph_verification.ipynb`](notebooks/subgraph_verification.ipynb). Confirmed:
 
-- `stream_subgraphs=True` surfaces the subgraph's own internal node updates as separately namespaced events (`updates|inner:<ns-id>`), not just `inner`'s aggregate result.
+- `stream_subgraphs=True` surfaces the subgraph's own internal node updates as separately namespaced events (`updates|inner:<ns-id>`) -- including *which branch* (`transform`/`format_text` vs `reject`) was actually taken -- not just `inner`'s aggregate result.
 - `interrupt_before=["inner"]` actually pauses the run *before* the subgraph executes (`state.next == ("inner",)`, with `state.values` still untouched by it), and resuming continues correctly through the subgraph to completion.
 - Both hold through the actual `RemoteGraph` class that `agents/supervisor/graph.py` uses, not just the raw `langgraph_sdk` client.
+
+### Workflow / subgraph-workflow patterns, defined in YAML
+
+[`src/remotegraph/workflow.py`](src/remotegraph/workflow.py) loads a graph's topology from YAML (or JSON -- PyYAML parses it unchanged) instead of imperative `.add_node()`/`.add_edge()` calls:
+
+- a node's `fn:` is a dotted `"package.module:attr"` import path (a plain function node);
+- a node's `workflow:` points at another workflow file, loaded recursively and added as a compiled **subgraph** node -- the same composition `agents/subgraph_demo` uses;
+- edges are `[from, to]` pairs (`__start__`/`__end__` sentinels included), or a `conditional:` block (`source`, routing `fn:`, `targets:` map) compiled via `add_conditional_edges`.
+
+`agents/subgraph_demo/workflow.yaml` + `inner_workflow.yaml` are the canonical "subgraph workflow pattern" example -- `agents/subgraph_demo/graph.py` is just `graph = load_workflow(...)`. [`agents/workflows/research_pipeline.yaml`](agents/workflows/research_pipeline.yaml) is a "plain workflow pattern" example: it re-declares `agents/supervisor/graph.py`'s `research -> code -> review` topology by referencing that file's *existing* node functions, and `tests/test_workflow.py` asserts the two produce structurally identical graphs -- proving the pattern without touching the already-tested hand-written supervisor.
+
+### Autonomous supervisor (deepagents), evaluated
+
+Asked to evaluate whether an autonomous, LLM-routed supervisor based on [`deepagents`](https://github.com/langchain-ai/deepagents) gets the same subgraph-level control verified above -- it does not, and that's a real distinction, not a bug:
+
+- `deepagents.create_deep_agent` delegates to sub-agents via a `task` *tool* -- an LLM decision at runtime, not LangGraph's structural subgraph composition. From `RemoteGraph`'s perspective, that delegation is just an ordinary tool-call/tool-result message, not a separately namespaced subgraph stream event. **`stream_subgraphs`/`interrupt_before` do not apply to it.**
+- It does get something else useful: `deepagents.middleware.subagents.CompiledSubAgent.runnable` accepts anything satisfying `Runnable`, and `RemoteGraph` is one. [`agents/autonomous_supervisor/graph.py`](agents/autonomous_supervisor/graph.py) registers `researcher`/`coder`/`reviewer` directly as `CompiledSubAgent`s -- **no wrapper tool/function code** -- and the deep agent's `task` tool genuinely dispatches to the real remote servers. Verified end-to-end in [`notebooks/autonomous_supervisor.ipynb`](notebooks/autonomous_supervisor.ipynb): given one task, it autonomously called `coder` (twice, refining its own request) then `reviewer`, and returned the combined result.
 
 ## CLI reference
 
@@ -123,8 +140,11 @@ Separately (not patched, just routed around): `POST /assistants/search` filters 
 ## Project layout
 
 ```
-src/remotegraph/      # the CLI (typer): cli.py, config.py, host.py, agent.py, backends/
+src/remotegraph/      # the CLI (typer): cli.py, config.py, host.py, agent.py, backends/, workflow.py (YAML loader)
 agents/                # researcher/coder/reviewer (served) + supervisor (RemoteGraph caller)
+agents/subgraph_demo/  # subgraph workflow pattern example, defined via workflow.yaml + inner_workflow.yaml
+agents/autonomous_supervisor/ # deepagents-based supervisor (CompiledSubAgent(runnable=RemoteGraph(...)))
+agents/workflows/      # plain workflow pattern YAML examples
 docker/aegra/          # Dockerfile + docker-compose.yml + aegra.json
 docker/open-langgraph/ # Dockerfile + docker-compose.yml + open_langgraph.json
 vendor/                # git submodule: jyje/open-langgraph-platform fork
