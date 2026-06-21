@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: remotegraph
+      POSTGRES_PASSWORD: remotegraph_secret
+      POSTGRES_DB: remotegraph
+    ports:
+      - "5432:5432"
+    volumes:
+      - aegra_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U remotegraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - aegra_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  aegra:
+    build:
+      context: ../..
+      dockerfile: docker/aegra/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "2026:2026"
+    # Loads OPENAI_API_KEY/OPENAI_MODEL/AUTH_TYPE etc. from the repo-root .env.
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - POSTGRES_USER=remotegraph
+      - POSTGRES_PASSWORD=remotegraph_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=remotegraph
+      - AEGRA_CONFIG=aegra.json
+      - PORT=2026
+      - REDIS_BROKER_ENABLED=true
+      - REDIS_URL=redis://redis:6379/0
+      # Containers can't reach the host's `localhost`; LM Studio (or any local
+      # OpenAI-compatible server) runs on the host, not in this network.
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2026/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  aegra_postgres_data:
+  aegra_redis_data:

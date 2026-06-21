@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "researcher": "agents/researcher/graph.py:graph",
+    "coder": "agents/coder/graph.py:graph",
+    "reviewer": "agents/reviewer/graph.py:graph"
+  }
+}
