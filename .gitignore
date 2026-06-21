@@ -20,6 +20,8 @@ venv/
 .langgraph_api/
 remotegraph.toml
 .ty_cache/
+.playwright-mcp/
+.ipynb_checkpoints/
 
 # Node
 node_modules/
