@@ -66,6 +66,18 @@ print(result['review'])
 
 다른 백엔드를 테스트하려면 `aegra`를 `open-langgraph`(포트 `8001`) 또는 `langgraph-platform`(포트 `2024`, Docker 없이 `up`이 그냥 `langgraph dev`를 띄움)으로 바꾸세요.
 
+### 분산 배포 (에이전트마다 별도 서버)
+
+이 파일럿은 편의상 3개 에이전트를 모두 하나의 백엔드에 배포하지만, `agents/supervisor/graph.py`는 각 에이전트의 URL을 독립적으로 해석합니다 — 공유 `REMOTEGRAPH_BASE_URL` 대신 `RESEARCHER_URL`/`CODER_URL`/`REVIEWER_URL`을 설정하면 supervisor가 별도로 호스팅된 서버 3개(예: 에이전트마다 각자 호스트에 띄운 Aegra 인스턴스)를 가리키도록 할 수 있습니다:
+
+```bash
+export RESEARCHER_URL=http://research-agent.internal:8000
+export CODER_URL=http://coder-agent.internal:8000
+export REVIEWER_URL=http://reviewer-agent.internal:8000
+```
+
+에이전트별 환경변수는 항상 `REMOTEGRAPH_BASE_URL`보다 우선하며, `REMOTEGRAPH_BASE_URL`은 위의 단일 백엔드 사용 시 fallback으로 남습니다.
+
 ## CLI 레퍼런스
 
 ```

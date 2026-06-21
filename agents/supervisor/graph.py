@@ -1,9 +1,10 @@
 """Supervisor agent: orchestrates researcher/coder/reviewer via RemoteGraph.
 
 This is the agent that "uses the collection of agents" — it never imports
-their graphs directly. It connects to whichever backend currently hosts them
-(REMOTEGRAPH_BASE_URL) through LangGraph's RemoteGraph client, the same way it
-would talk to LangGraph Platform Cloud.
+their graphs directly. Each agent can be hosted on its own server: set
+RESEARCHER_URL/CODER_URL/REVIEWER_URL independently, or REMOTEGRAPH_BASE_URL
+as a shared fallback when they're all deployed to the same backend (as in
+this pilot's notebooks/tests).
 """
 
 from __future__ import annotations
@@ -14,9 +15,16 @@ from typing import TypedDict
 from langgraph.graph import StateGraph
 from langgraph.pregel.remote import RemoteGraph
 
+DEFAULT_BASE_URL = "http://localhost:2026"
+
 
 def _remote(assistant_id: str) -> RemoteGraph:
-    base_url = os.environ.get("REMOTEGRAPH_BASE_URL", "http://localhost:2026")
+    env_var = f"{assistant_id.upper()}_URL"
+    base_url = (
+        os.environ.get(env_var)
+        or os.environ.get("REMOTEGRAPH_BASE_URL")
+        or DEFAULT_BASE_URL
+    )
     return RemoteGraph(assistant_id, url=base_url)
 
 

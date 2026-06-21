@@ -66,6 +66,18 @@ print(result['review'])
 
 Swap `aegra` for `open-langgraph` (port `8001`) or `langgraph-platform` (port `2024`, no Docker — `up` just spawns `langgraph dev`) to test the other backends.
 
+### Distributed deployment (each agent on its own server)
+
+This pilot deploys all three agents to one backend for convenience, but `agents/supervisor/graph.py` resolves each agent's URL independently — set `RESEARCHER_URL`/`CODER_URL`/`REVIEWER_URL` instead of the shared `REMOTEGRAPH_BASE_URL` to point the supervisor at three separately hosted servers (e.g. one Aegra instance per agent, each on its own host):
+
+```bash
+export RESEARCHER_URL=http://research-agent.internal:8000
+export CODER_URL=http://coder-agent.internal:8000
+export REVIEWER_URL=http://reviewer-agent.internal:8000
+```
+
+A per-agent env var always wins over `REMOTEGRAPH_BASE_URL`, which stays as a fallback for the single-backend case above.
+
 ## CLI reference
 
 ```
