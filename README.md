@@ -92,8 +92,13 @@ uv run pytest tests/             # smoke tests against live backends auto-skip i
 - Three Alembic migrations created a partial index with `WHERE ... > NOW()` — Postgres rejects non-`IMMUTABLE` functions in index predicates, so `alembic upgrade head` crash-looped on a fresh database.
 - `AUTH_TYPE=noop` returned `is_authenticated=False`, but `get_current_user` rejects any non-authenticated request — so noop mode never actually permitted access, contradicting its own docstring.
 - `pyproject.toml` only sets a lower bound on `a2a-sdk` (`>=0.3.22`); a plain `pip install .` resolves a newer major version with breaking API changes. This repo's `docker/open-langgraph/Dockerfile` pins it to the version in their lockfile.
+- `api/quotas.py` used `from __future__ import annotations` together with `User` imported only under `TYPE_CHECKING` and a bare string `"Request"` annotation with no import at all -- both fine for static type checkers, but FastAPI/Pydantic need to resolve these forward refs at runtime to build the OpenAPI schema, so `GET /openapi.json` (and therefore `/docs`) 500'd on every request. Fixed by importing both at module level.
 
 Separately (not patched, just routed around): `POST /assistants/search` filters by the caller's identity, but the server's own auto-seeded default assistants are owned by `user_id="system"` — so `remotegraph agent list --backend open-langgraph` returns an empty list even though the agents work fine. `remotegraph agent call`/`RemoteGraph` pass a graph ID directly and are unaffected.
+
+## Experiment results
+
+[`REPORT.md`](REPORT.md) has real captured logs and screenshots from running all three backends end-to-end, plus reproducible Jupyter notebooks per backend under [`notebooks/`](notebooks/).
 
 ## Project layout
 
