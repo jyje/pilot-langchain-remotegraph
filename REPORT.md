@@ -2,6 +2,16 @@
 
 This report captures the results of actually running all three backends end-to-end via `remotegraph`, with real LLM calls against a local [LM Studio](https://lmstudio.ai/) server (`google/gemma-4-e4b`) under [OrbStack](https://orbstack.dev/). Full, reproducible, re-executable experiments live in [`notebooks/`](notebooks/) — this document is the human-readable summary of one execution of each.
 
+## Agent Protocol
+
+The three backends aren't just three servers that happen to expose a similar REST API -- all three implement [Agent Protocol](https://github.com/langchain-ai/agent-protocol), LangChain's framework-agnostic spec for serving LLM agents (runs, threads, long-term memory store, streaming, agent introspection). That's *why* one `RemoteGraph` client works unmodified against all three; the experiments below are effectively checking whether independent Agent Protocol implementations actually interoperate with the official client, not just whether each one happens to work in isolation.
+
+| Backend | Agent Protocol relationship |
+|---|---|
+| LangGraph Platform self-hosted (`langgraph dev`) | Reference implementation -- "LangGraph Platform implements a superset of this protocol" ([agent-protocol README](https://github.com/langchain-ai/agent-protocol)) |
+| `aegra` | Community implementation, built explicitly to the Agent Protocol spec |
+| `open-langgraph-platform` | Community implementation -- "Agent Protocol server built on LangGraph" |
+
 ## Summary
 
 | Backend | Notebook | Status | Swagger / API docs |

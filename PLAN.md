@@ -4,6 +4,8 @@
 
 `pilot-langchain-remotegraph`는 LangGraph의 `RemoteGraph` 클라이언트(원격에 호스팅된 그래프를 로컬 그래프처럼 호출하는 기능)가 LangGraph Platform 호환 REST API를 구현하는 다양한 self-host 백엔드에서도 동작하는지 검증하는 파일럿이다. 후보 백엔드 3개(aegra, LangGraph Platform self-hosted, open-langgraph-platform)를 조사했고, 각각 Docker로 띄워 테스트할 수 있는 옵션으로 다룬다. 이를 관리/실행하기 위한 `remotegraph` CLI(typer + ruff + ty, Python 3.14, uv 패키징)를 만든다. 데모용 에이전트는 Researcher / Coder / Reviewer 3개 + 이들을 RemoteGraph로 호출하는 Supervisor 1개로 구성한다. 에이전트 LLM 호출은 OpenAI 호환 클라이언트로 구성하고 모델명은 하드코딩하지 않는다. 에이전트의 툴은 일반 LangChain `@tool` 함수로 구현한다 (MCP는 이 파일럿의 비즈니스 로직과 무관하므로 사용하지 않음 — 개발 중 정확한 레퍼런스 확인을 위해 LangChain 공식 문서 MCP 서버(`docs.langchain.com/mcp`)는 별도로 Claude Code 개발 도구로만 등록).
 
+**추가 확인(구현 후반에 조사)**: 이 3개 백엔드가 같은 REST API 모양을 갖는 건 우연이 아니라, 셋 다 LangChain의 프레임워크 독립적 스펙인 [Agent Protocol](https://github.com/langchain-ai/agent-protocol)을 구현하기 때문이다 — LangGraph Platform은 이 프로토콜의 superset 레퍼런스 구현체, aegra와 open-langgraph-platform은 커뮤니티 구현체. 즉 이 파일럿은 "RemoteGraph가 LangGraph Platform류 서버에서 동작하는가"를 넘어 "독립적인 Agent Protocol 구현체들이 공식 클라이언트와 실제로 상호운용되는가"를 검증하는 것이 핵심 목표다. 자세한 내용은 README.md/REPORT.md의 "Agent Protocol" 섹션 참고.
+
 ## 리서치 요약 (의사결정에 반영된 내용)
 
 | 백엔드 | API 호환성 | Docker 경로 | 특이사항 |

@@ -8,6 +8,16 @@ Pilot: drive LangGraph's `RemoteGraph` against three self-hosted, LangGraph-Plat
 
 </div>
 
+## Agent Protocol
+
+The reason `RemoteGraph` works the same way against three different servers isn't a coincidence -- all three implement [**Agent Protocol**](https://github.com/langchain-ai/agent-protocol), LangChain's framework-agnostic spec for serving LLM agents in production (runs, threads, long-term memory store, streaming, agent introspection). **Checking whether independent Agent Protocol implementations actually interoperate with the official client is this pilot's central goal**, not an incidental implementation detail.
+
+| Backend | Agent Protocol relationship | Source |
+|---|---|---|
+| LangGraph Platform self-hosted (`langgraph dev`) | Reference implementation -- "LangGraph Platform implements a superset of this protocol" | [langchain-ai/agent-protocol](https://github.com/langchain-ai/agent-protocol) README |
+| [`aegra`](https://github.com/aegra/aegra) | Community implementation, built explicitly to the Agent Protocol spec | [aegra docs](https://docs.aegra.dev/) |
+| [`open-langgraph-platform`](https://github.com/HyunjunJeon/open-langgraph-platform) | Community implementation -- "Agent Protocol server built on LangGraph" | project README |
+
 ## Overview
 
 This repo is a pilot that answers one question: **does `langgraph.pregel.remote.RemoteGraph` work the same way against any server that implements the LangGraph Platform REST API (`/assistants`, `/threads`, `/runs`), not just LangGraph Platform Cloud?**
