@@ -19,6 +19,7 @@ SERVED_AGENTS = {
     "researcher": "agents/researcher/graph.py:graph",
     "coder": "agents/coder/graph.py:graph",
     "reviewer": "agents/reviewer/graph.py:graph",
+    "subgraph_demo": "agents/subgraph_demo/graph.py:graph",
 }
 
 

@@ -1,0 +1,51 @@
+{
+  "simple_qa": {
+    "input": "What is 12 times 8? Answer with just the number.",
+    "reply": "96"
+  },
+  "thread_state": {
+    "thread_id": "019ef180-23ed-7681-92af-2ac29592dd44",
+    "turn1_input": "My favorite number is 7. Remember it.",
+    "turn1_reply": "I have remembered that your favorite number is 7.",
+    "turn2_input": "What is my favorite number plus 10?",
+    "turn2_reply": "Your favorite number plus 10 is 17."
+  },
+  "streaming": {
+    "input": "Count from 1 to 5.",
+    "event_count": 3,
+    "events": [
+      {
+        "event": "metadata"
+      },
+      {
+        "event": "values",
+        "last_message": "Count from 1 to 5."
+      },
+      {
+        "event": "values",
+        "last_message": "1\n2\n3\n4\n5"
+      }
+    ]
+  },
+  "subgraph_branch_transform": {
+    "input_text": "hello remotegraph",
+    "branch": "transform/format_text",
+    "final_text": "[REMOTEGRAPH HELLO [PREPARED]] [finalized]"
+  },
+  "subgraph_branch_reject": {
+    "input_text": "",
+    "branch": "reject",
+    "final_text": "[rejected: empty input] [finalized]"
+  },
+  "error_edge_case": {
+    "raised": true,
+    "error_type": "UnprocessableEntityError",
+    "error_message": "Invalid assistant: 'does-not-exist'. Must be either:\n- A valid assistant UUID, or\n- One of the registered graphs: researcher, coder, reviewer, subgraph_demo"
+  },
+  "supervisor_pipeline": {
+    "task": "Write a one-line python function that returns the square of a number.",
+    "research": "```python\ndef square(n): return n**2\n```\n\n### Example Usage:\n```python\nprint(square(5))  # Output: 25\nprint(square(-3)) # Output: 9\n```\n\n*(Alternatively, using `pow()` or multiplication provides the same result.)*",
+    "code": "```python\ndef square(n): return n**2\n```",
+    "review": "The code is correct and adheres to good Pythonic style for its simplicity.\n\n**Verdict:** Excellent.\n\nThe function concisely calculates the square of a number."
+  }
+}

@@ -147,6 +147,8 @@ Separately (not patched, just routed around): `POST /assistants/search` filters 
 
 [`REPORT.md`](REPORT.md) has real captured logs and screenshots from running all three backends end-to-end, plus reproducible Jupyter notebooks per backend under [`notebooks/`](notebooks/).
 
+For a prompt-by-prompt demonstration across multiple scenarios (simple call, multi-turn thread state, streaming, subgraph branch control, error handling, multi-agent pipeline) with real captured replies, see [`docs/experiments-en.md`](docs/experiments-en.md) (English) / [`docs/experiments-ko.md`](docs/experiments-ko.md) (한국어), reproducible via [`scripts/run_experiments.py`](scripts/run_experiments.py).
+
 ## Project layout
 
 ```

@@ -1,0 +1,51 @@
+{
+  "simple_qa": {
+    "input": "12 곱하기 8은 얼마야? 숫자로만 답해줘.",
+    "reply": "96"
+  },
+  "thread_state": {
+    "thread_id": "019ef17a-34d3-7df3-9129-34d31e998c19",
+    "turn1_input": "내가 좋아하는 숫자는 7이야. 기억해줘.",
+    "turn1_reply": "네, 알겠습니다. 좋아하시는 숫자가 7이라는 것을 기억하고 있겠습니다! 😊",
+    "turn2_input": "내가 좋아하는 숫자에 10을 더하면 얼마야?",
+    "turn2_reply": "좋아하시는 숫자(7)에 10을 더하면 **17**입니다."
+  },
+  "streaming": {
+    "input": "1부터 5까지 세어줘.",
+    "event_count": 3,
+    "events": [
+      {
+        "event": "metadata"
+      },
+      {
+        "event": "values",
+        "last_message": "1부터 5까지 세어줘."
+      },
+      {
+        "event": "values",
+        "last_message": "1, 2, 3, 4, 5입니다."
+      }
+    ]
+  },
+  "subgraph_branch_transform": {
+    "input_text": "안녕 리모트그래프",
+    "branch": "transform/format_text",
+    "final_text": "[리모트그래프 안녕 [PREPARED]] [finalized]"
+  },
+  "subgraph_branch_reject": {
+    "input_text": "",
+    "branch": "reject",
+    "final_text": "[rejected: empty input] [finalized]"
+  },
+  "error_edge_case": {
+    "raised": true,
+    "error_type": "UnprocessableEntityError",
+    "error_message": "Invalid assistant: 'does-not-exist'. Must be either:\n- A valid assistant UUID, or\n- One of the registered graphs: researcher, coder, reviewer, subgraph_demo"
+  },
+  "supervisor_pipeline": {
+    "task": "숫자를 입력받아 그 숫자의 제곱을 반환하는 한 줄짜리 파이썬 함수를 작성해줘.",
+    "research": "물론이죠. 가장 간결한 한 줄짜리 파이썬 함수는 다음과 같습니다.\n\n### 1. 곱셈 연산자 사용 (가장 일반적)\n```python\ndef square(n):\n  return n * n\n```\n\n### 2. 거듭제곱 연산자 사용 (가장 파이썬스러운 방식)\n```python\ndef square(n):\n  return n ** 2\n```\n\n### ✨ 코드를 한 줄로 압축하려면 (Lambda 함수 사용)\n만약 **정의 자체를 한 줄로** 표현하고 싶다면, `lambda` 함수를 사용하는 것이 가장 좋습니다.\n\n```python\nsquare = lambda n: n * n\n# 또는\nsquare = lambda n: n ** 2\n\n# 사용 예시:\nprint(square(5))  # 출력: 25\n```\n\n어떤 방식을 사용하셔도 원하는 결과를 얻으실 수 있습니다. 일반적으로는 `lambda` 함수를 사용하여 한 줄로 정의하는 방법을 많이 사용합니다.",
+    "code": "```python\nsquare = lambda n: n ** 2\n```",
+    "review": "**Verdict:** Functionally correct, but violates idiomatic Python style conventions for readability and maintainability.\n\n### Issues Found\n\n*   **E731: Do not assign a `lambda` expression, use a `def`**\n    *   While this usage is terse and works, defining a named function in Python (like `square`) using `lambda` makes the code less readable and harder to debug than using a standard `def` block.\n\n### Suggestion for Improvement\n\nFor functions that are named and used multiple times (or if they might grow in complexity), always prefer `def`:\n\n```python\ndef square(n):\n    return n ** 2\n```"
+  }
+}
