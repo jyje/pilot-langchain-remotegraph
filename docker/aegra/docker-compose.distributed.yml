@@ -1,0 +1,76 @@
+# Parameterized single-agent Aegra stack, used by `remotegraph agent
+# deploy-distributed` (src/remotegraph/distributed.py). The CLI runs this once
+# per agent with a distinct compose project name (`-p remotegraph-<agent>`),
+# AEGRA_PORT, and AGENT_CONFIG, so each agent gets its own fully isolated
+# FastAPI + Postgres + Redis stack on its own URL. Postgres/Redis are
+# internal-only (no published host ports) to avoid collisions across stacks;
+# only the agent's HTTP port is published.
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: remotegraph
+      POSTGRES_PASSWORD: remotegraph_secret
+      POSTGRES_DB: remotegraph
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U remotegraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  aegra:
+    build:
+      context: ../..
+      dockerfile: docker/aegra/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${AEGRA_PORT:?set AEGRA_PORT}:2026"
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - POSTGRES_USER=remotegraph
+      - POSTGRES_PASSWORD=remotegraph_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=remotegraph
+      # The single-graph config the CLI generated for this agent, mounted below.
+      - AEGRA_CONFIG=aegra.runtime.json
+      - PORT=2026
+      - REDIS_BROKER_ENABLED=true
+      - REDIS_URL=redis://redis:6379/0
+      # Containers can't reach the host's `localhost`; LM Studio (or any local
+      # OpenAI-compatible server) runs on the host, not in this network.
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+    volumes:
+      - "${AGENT_CONFIG:?set AGENT_CONFIG}:/app/aegra.runtime.json:ro"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2026/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  redis_data:

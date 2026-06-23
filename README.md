@@ -78,7 +78,7 @@ Swap `aegra` for `open-langgraph` (port `8001`) or `langgraph-platform` (port `2
 
 ### Distributed deployment (each agent on its own server)
 
-This pilot deploys all three agents to one backend for convenience, but `agents/supervisor/graph.py` resolves each agent's URL independently — set `RESEARCHER_URL`/`CODER_URL`/`REVIEWER_URL` instead of the shared `REMOTEGRAPH_BASE_URL` to point the supervisor at three separately hosted servers (e.g. one Aegra instance per agent, each on its own host):
+`agents/supervisor/graph.py` resolves each agent's URL independently — set `RESEARCHER_URL`/`CODER_URL`/`REVIEWER_URL` instead of the shared `REMOTEGRAPH_BASE_URL` to point the supervisor at separately hosted servers. A per-agent env var always wins over `REMOTEGRAPH_BASE_URL`, which stays as a fallback for the single-backend case.
 
 ```bash
 export RESEARCHER_URL=http://research-agent.internal:8000
@@ -86,7 +86,26 @@ export CODER_URL=http://coder-agent.internal:8000
 export REVIEWER_URL=http://reviewer-agent.internal:8000
 ```
 
-A per-agent env var always wins over `REMOTEGRAPH_BASE_URL`, which stays as a fallback for the single-backend case above.
+Two CLI paths actually stand the per-agent servers up — pick by how much backend you want behind each agent:
+
+**A. One full Aegra stack per agent** — reuses the mature backend (FastAPI + Postgres + Redis), so you get persistence/threads/store per agent. Each agent runs in its own isolated docker compose project on its own port:
+
+```bash
+uv run remotegraph agent deploy-distributed   # researcher:2027, coder:2028, reviewer:2029
+uv run remotegraph agent urls                 # prints the export RESEARCHER_URL=... lines
+uv run remotegraph agent stop-distributed
+```
+
+**B. One standalone FastAPI microservice per agent** — `docker/agent-server/` runs [`src/remotegraph/agent_server.py`](src/remotegraph/agent_server.py), a stateless single-graph server that implements just the slice of the LangGraph Platform API `RemoteGraph` needs (`POST /runs/stream`). **No Postgres/Redis** — the leanest "agent = microservice" option:
+
+```bash
+uv run remotegraph agent up-servers           # researcher:8101, coder:8102, reviewer:8103
+uv run remotegraph agent down-servers
+# or run one locally without Docker:
+uv run remotegraph agent serve researcher --port 8101
+```
+
+Either way, point the supervisor at the printed URLs and run the pipeline. The standalone server's `/runs/stream` SSE output is verified wire-compatible with the actual `langgraph_sdk` SSE decoder that `RemoteGraph` uses (`tests/test_agent_server.py`).
 
 ### Subgraph control, verified
 
@@ -120,6 +139,11 @@ remotegraph config show|init|set <key> <value>   # remotegraph.toml (active_back
 remotegraph host list|up|down|status|logs [backend]
 remotegraph agent deploy|list [backend]
 remotegraph agent call <name> "<message>" [--backend <backend>]
+
+# distributed: each agent on its own server (see "Distributed deployment")
+remotegraph agent deploy-distributed|stop-distributed|urls   # A: one Aegra stack per agent
+remotegraph agent up-servers|down-servers                    # B: standalone FastAPI per agent
+remotegraph agent serve <name> [--port <p>]                  # B: one FastAPI server, no Docker
 ```
 
 `backend` is one of `aegra`, `open-langgraph`, `langgraph-platform`; omit it to use the configured `active_backend` (`remotegraph config set active_backend <name>`).
@@ -153,12 +177,15 @@ For a prompt-by-prompt demonstration across multiple scenarios (simple call, mul
 
 ```
 src/remotegraph/      # the CLI (typer): cli.py, config.py, host.py, agent.py, backends/, workflow.py (YAML loader)
+src/remotegraph/agent_server.py  # standalone single-agent FastAPI server (distributed deploy "B")
+src/remotegraph/distributed.py   # one-Aegra-stack-per-agent orchestration (distributed deploy "A")
 agents/                # researcher/coder/reviewer (served) + supervisor (RemoteGraph caller)
 agents/subgraph_demo/  # subgraph workflow pattern example, defined via workflow.yaml + inner_workflow.yaml
 agents/autonomous_supervisor/ # deepagents-based supervisor (CompiledSubAgent(runnable=RemoteGraph(...)))
 agents/workflows/      # plain workflow pattern YAML examples
-docker/aegra/          # Dockerfile + docker-compose.yml + aegra.json
+docker/aegra/          # Dockerfile + docker-compose.yml + aegra.json (+ docker-compose.distributed.yml for "A")
 docker/open-langgraph/ # Dockerfile + docker-compose.yml + open_langgraph.json
+docker/agent-server/   # Dockerfile + docker-compose.yml for the standalone FastAPI agent servers ("B")
 vendor/                # git submodule: jyje/open-langgraph-platform fork
 langgraph.json         # config consumed by the langgraph-platform (dev) backend
 ```

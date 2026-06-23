@@ -1,0 +1,83 @@
+# Three standalone FastAPI agent servers, each on its own port and URL -- the
+# "agent = microservice" deployment. No Postgres/Redis: each server is the
+# stateless single-graph app in src/remotegraph/agent_server.py. Point the
+# supervisor at them with:
+#   RESEARCHER_URL=http://localhost:8101
+#   CODER_URL=http://localhost:8102
+#   REVIEWER_URL=http://localhost:8103
+#
+#   docker compose -f docker/agent-server/docker-compose.yml up -d --build
+services:
+  researcher:
+    build:
+      context: ../..
+      dockerfile: docker/agent-server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8101:8000"
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - AGENT_GRAPH=agents/researcher/graph.py:graph
+      - AGENT_ID=researcher
+      - PORT=8000
+      # Containers can't reach the host's `localhost`; the OpenAI-compatible
+      # server (LM Studio etc.) runs on the host, not in this network.
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ok || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  coder:
+    build:
+      context: ../..
+      dockerfile: docker/agent-server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8102:8000"
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - AGENT_GRAPH=agents/coder/graph.py:graph
+      - AGENT_ID=coder
+      - PORT=8000
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ok || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  reviewer:
+    build:
+      context: ../..
+      dockerfile: docker/agent-server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8103:8000"
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - AGENT_GRAPH=agents/reviewer/graph.py:graph
+      - AGENT_ID=reviewer
+      - PORT=8000
+      - OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ok || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
