@@ -140,6 +140,12 @@ def create_app(graph: Any, *, assistant_id: str = "agent") -> FastAPI:
 
     @app.get("/assistants/{requested_id}/graph")
     def assistant_graph(requested_id: str) -> JSONResponse:
+        # Single-graph server: reject a mismatched assistant_id rather than
+        # silently returning this server's graph, so a client pointed at the
+        # wrong agent fails loudly instead of getting the wrong topology.
+        if requested_id != assistant_id:
+            detail = f"Unknown assistant {requested_id!r}; this server serves {assistant_id!r}"
+            return JSONResponse({"error": detail}, status_code=404)
         try:
             drawable = graph.get_graph().to_json()
         except Exception:  # noqa: BLE001 -- introspection is best-effort

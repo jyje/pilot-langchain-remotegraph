@@ -108,6 +108,13 @@ def test_health_endpoint() -> None:
 
 
 @fastapi_only
+def test_assistant_graph_404s_on_mismatched_id() -> None:
+    client = TestClient(agent_server.create_app(FakeGraph(), assistant_id="coder"))
+    assert client.get("/assistants/coder/graph").status_code == 200
+    assert client.get("/assistants/researcher/graph").status_code == 404
+
+
+@fastapi_only
 def test_runs_stream_returns_event_stream() -> None:
     client = TestClient(agent_server.create_app(FakeGraph()))
     resp = client.post("/runs/stream", json={"input": {"messages": []}})
