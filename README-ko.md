@@ -105,7 +105,13 @@ uv run remotegraph agent down-servers
 uv run remotegraph agent serve researcher --port 8101
 ```
 
-어느 쪽이든 출력된 URL로 supervisor를 가리키고 파이프라인을 실행하면 됩니다. 독립 서버의 `/runs/stream` SSE 출력은 `RemoteGraph`가 사용하는 실제 `langgraph_sdk` SSE 디코더와 호환됨이 검증되어 있습니다(`tests/test_agent_server.py`).
+어느 쪽이든 출력된 URL로 supervisor를 가리키고 파이프라인을 실행하면 됩니다. 독립 서버의 `/runs/stream` SSE 출력은 `RemoteGraph`가 사용하는 실제 `langgraph_sdk` SSE 디코더와 호환됨이 검증되어 있습니다(`tests/test_agent_server.py`). 실제 `RemoteGraph` 클래스로 — 서브그래프 스트리밍 제어까지 포함해 — 독립 서버를 End-to-End 검증하려면 (백엔드/Docker/LLM 불필요) 다음을 실행하세요:
+
+```bash
+uv run python scripts/verify_agent_server.py
+```
+
+`agents/subgraph_demo`(결정적, LLM 없음)를 자체 포트로 띄우고 `RemoteGraph`로 구동해서, 평범한 `invoke`·조건부 reject 분기, 그리고 inner 서브그래프 노드 업데이트가 별도 네임스페이스의 `stream_subgraphs` 이벤트로 표면화되는지 — 무거운 백엔드가 제공하던 바로 그 제어를 이제 DB 없는 서버에서 — 확인합니다.
 
 ### 서브그래프 제어, 검증됨
 

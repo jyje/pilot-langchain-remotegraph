@@ -105,7 +105,13 @@ uv run remotegraph agent down-servers
 uv run remotegraph agent serve researcher --port 8101
 ```
 
-Either way, point the supervisor at the printed URLs and run the pipeline. The standalone server's `/runs/stream` SSE output is verified wire-compatible with the actual `langgraph_sdk` SSE decoder that `RemoteGraph` uses (`tests/test_agent_server.py`).
+Either way, point the supervisor at the printed URLs and run the pipeline. The standalone server's `/runs/stream` SSE output is verified wire-compatible with the actual `langgraph_sdk` SSE decoder that `RemoteGraph` uses (`tests/test_agent_server.py`). For an end-to-end check through the real `RemoteGraph` class — including subgraph streaming control — against the standalone server, run (no backend/Docker/LLM needed):
+
+```bash
+uv run python scripts/verify_agent_server.py
+```
+
+It serves `agents/subgraph_demo` (deterministic, LLM-free) on its own port and drives it via `RemoteGraph`, confirming plain `invoke`, the conditional reject branch, and that inner subgraph node updates surface as separately namespaced `stream_subgraphs` events — the same control the heavy backends provide, now from a no-database server.
 
 ### Subgraph control, verified
 
