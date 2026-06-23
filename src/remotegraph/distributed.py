@@ -41,6 +41,10 @@ CONFIG_DIR = REPO_ROOT / "docker" / "aegra"
 
 def agent_port(name: str, base_port: int = DEFAULT_BASE_PORT) -> int:
     """Deterministic per-agent port: base_port + the agent's index."""
+    if name not in DISTRIBUTED_AGENTS:
+        raise ValueError(
+            f"Unknown agent {name!r}. Supported agents: {', '.join(DISTRIBUTED_AGENTS)}"
+        )
     return base_port + list(DISTRIBUTED_AGENTS).index(name)
 
 
@@ -61,8 +65,12 @@ def write_agent_config(name: str, graph_ref: str) -> Path:
     return path
 
 
-def compose_command(name: str, port: int, *action: str) -> list[str]:
-    """Build the `docker compose` argv for one agent's stack."""
+def compose_command(name: str, _port: int, *action: str) -> list[str]:
+    """Build the `docker compose` argv for one agent's stack.
+
+    `_port` is accepted for call-site symmetry with the other per-agent
+    helpers but is unused here -- the port reaches compose via `compose_env`.
+    """
     return [
         "docker",
         "compose",

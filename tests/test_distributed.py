@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from remotegraph import distributed
 
 
@@ -9,6 +11,11 @@ def test_agent_ports_increment_from_base() -> None:
     assert distributed.agent_port("researcher") == 2027
     assert distributed.agent_port("coder") == 2028
     assert distributed.agent_port("reviewer") == 2029
+
+
+def test_agent_port_unknown_name_lists_supported_agents() -> None:
+    with pytest.raises(ValueError, match="Supported agents: researcher, coder, reviewer"):
+        distributed.agent_port("planner")
 
 
 def test_agent_ports_respect_custom_base() -> None:
