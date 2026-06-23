@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import subprocess
+
 import typer
 from langgraph_sdk import get_sync_client
 
+from remotegraph import distributed
 from remotegraph.backends import get_backend
+from remotegraph.backends.base import REPO_ROOT
 from remotegraph.settings import get_active_backend
 
 app = typer.Typer(help="Deploy and interact with the example agents.")
+
+# The three standalone FastAPI agent servers (docker/agent-server) -- the
+# "agent = microservice" path, no Postgres/Redis.
+SERVERS_COMPOSE = REPO_ROOT / "docker" / "agent-server" / "docker-compose.yml"
 
 BackendOption = typer.Option(
     None, "--backend", "-b", help="Backend name (defaults to the active backend)."
@@ -69,3 +77,90 @@ def call(
     ):
         if chunk.event == "values" and chunk.data.get("messages"):
             typer.echo(chunk.data["messages"][-1]["content"])
+
+
+def _echo_exports(urls: dict[str, str]) -> None:
+    """Print the shell `export *_URL=...` lines the supervisor reads."""
+    typer.echo("\n# Point the supervisor at the per-agent servers:")
+    for var, url in urls.items():
+        typer.echo(f"export {var}={url}")
+
+
+# --- A: distributed deploy -- one full Aegra stack per agent --------------------
+
+
+@app.command("deploy-distributed")
+def deploy_distributed(
+    base_port: int = typer.Option(
+        distributed.DEFAULT_BASE_PORT, help="Port for the first agent; others increment from it."
+    ),
+) -> None:
+    """Bring up one isolated Aegra stack per agent, each on its own URL."""
+    urls = distributed.deploy(base_port)
+    typer.echo(f"Deployed {list(distributed.DISTRIBUTED_AGENTS)} as separate Aegra stacks")
+    _echo_exports(urls)
+
+
+@app.command("stop-distributed")
+def stop_distributed(
+    base_port: int = typer.Option(distributed.DEFAULT_BASE_PORT, help="Base port used at deploy."),
+) -> None:
+    """Tear down every per-agent Aegra stack started by deploy-distributed."""
+    distributed.down(base_port)
+    typer.echo("Stopped all per-agent Aegra stacks")
+
+
+@app.command("urls")
+def urls(
+    base_port: int = typer.Option(distributed.DEFAULT_BASE_PORT, help="Base port of the agents."),
+) -> None:
+    """Print the supervisor `export *_URL=...` lines for the distributed agents."""
+    _echo_exports(distributed.urls(base_port))
+
+
+# --- B: standalone FastAPI agent servers ----------------------------------------
+
+
+@app.command("serve")
+def serve(
+    name: str = typer.Argument(..., help="Agent name, e.g. researcher"),
+    port: int = typer.Option(8000, help="Port to bind the FastAPI server to."),
+    host: str = typer.Option("127.0.0.1", help="Host to bind to."),
+) -> None:
+    """Run a single agent as a standalone FastAPI server (no backend/Docker)."""
+    import uvicorn
+
+    from remotegraph.agent_server import create_app, load_graph
+
+    graph_ref = SERVED_AGENTS.get(name, name)
+    app_ = create_app(load_graph(graph_ref), assistant_id=name)
+    typer.echo(f"Serving {name} at http://{host}:{port}  (graph={graph_ref})")
+    uvicorn.run(app_, host=host, port=port)
+
+
+@app.command("up-servers")
+def up_servers() -> None:
+    """Bring up the three standalone FastAPI agent servers via docker compose."""
+    subprocess.run(
+        ["docker", "compose", "-f", str(SERVERS_COMPOSE), "up", "-d", "--build"],
+        cwd=REPO_ROOT,
+        check=True,
+    )
+    _echo_exports(
+        {
+            "RESEARCHER_URL": "http://localhost:8101",
+            "CODER_URL": "http://localhost:8102",
+            "REVIEWER_URL": "http://localhost:8103",
+        }
+    )
+
+
+@app.command("down-servers")
+def down_servers() -> None:
+    """Stop the three standalone FastAPI agent servers."""
+    subprocess.run(
+        ["docker", "compose", "-f", str(SERVERS_COMPOSE), "down"],
+        cwd=REPO_ROOT,
+        check=True,
+    )
+    typer.echo("Stopped the standalone agent servers")
